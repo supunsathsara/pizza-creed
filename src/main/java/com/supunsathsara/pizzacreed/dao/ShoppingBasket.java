@@ -1,0 +1,32 @@
+package com.supunsathsara.pizzacreed.dao;
+
+
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.List;
+
+@Entity
+@Table(name = "shopping_basket")
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+public class ShoppingBasket {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
+    private Long id;
+
+    @Column(name = "status")
+    private String status;
+
+    @Column(name = "total_amount")
+    private double totalAmount;
+
+    @OneToMany(mappedBy = "shoppingBasket", cascade = CascadeType.ALL)
+    private List<BasketItem> items;
+}
