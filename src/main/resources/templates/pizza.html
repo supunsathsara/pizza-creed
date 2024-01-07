@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Pizza | Pizza Creed</title>
+</head>
+<body>
+    <h1>Pizza</h1>
+    <p>Here is a list of all the pizzas:</p>
+    <ul>
+        <li th:each="pizza : ${pizzas}">
+            <span th:text="${pizza.name}">Pizza Name</span> &mdash;
+            <span th:text="${pizza.size}">Pizza size</span> &mdash;
+            <span th:text="${pizza.price}">Pizza price</span>
+        </li>
+    </ul>
+
+</body>
+</html>

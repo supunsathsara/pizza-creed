@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>New Pizza | Pizza Creed</title>
+</head>
+<body>
+<h1>Add Pizza</h1>
+<form th:action="@{/addPizza}" th:object="${newPizza}" method="post">
+    <label>Name: <input type="text" th:field="*{name}"/></label><br/>
+    <label>Size: <input type="text" th:field="*{size}"/></label><br/>
+    <label>Price: <input type="text" th:field="*{price}"/></label><br/>
+    <input type="submit" value="Add Pizza"/>
+</form>
+<a th:href="@{/menu}">Back to Menu</a>
+</body>
+</html>

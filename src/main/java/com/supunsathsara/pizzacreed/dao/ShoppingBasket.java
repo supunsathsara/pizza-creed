@@ -1,6 +1,7 @@
 package com.supunsathsara.pizzacreed.dao;
 
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -28,5 +29,6 @@ public class ShoppingBasket {
     private double totalAmount;
 
     @OneToMany(mappedBy = "shoppingBasket", cascade = CascadeType.ALL)
+    @JsonIgnore
     private List<BasketItem> items;
 }
