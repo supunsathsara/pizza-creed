@@ -1,11 +1,14 @@
 package com.supunsathsara.pizzacreed.controller;
 
-import com.supunsathsara.pizzacreed.converter.DTOConverter;
+import com.supunsathsara.pizzacreed.util.DTOConverter;
 import com.supunsathsara.pizzacreed.dao.BasketItem;
 import com.supunsathsara.pizzacreed.dao.Order;
 import com.supunsathsara.pizzacreed.dao.ShoppingBasket;
 import com.supunsathsara.pizzacreed.dto.ShoppingBasketDTO;
+import com.supunsathsara.pizzacreed.exception.BasketAlreadyCheckedOutException;
 import com.supunsathsara.pizzacreed.service.ShoppingBasketService;
+import com.supunsathsara.pizzacreed.util.ExceptionHandlingService;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,54 +29,94 @@ public class ShoppingBasketRestController {
         return shoppingBasketService.createBasket();
     }
 
-    /*@GetMapping("/api/baskets/{basketId}")
-    public ShoppingBasket getBasketById(@PathVariable Long basketId) {
-       return shoppingBasketService.getBasketById(basketId);
-
-    }*/
+    @GetMapping("/api/baskets/{basketId}")
+    public ResponseEntity<Object> getBasketById(@PathVariable Long basketId) {
+        try {
+            ShoppingBasket basket = shoppingBasketService.getBasketById(basketId);
+            ShoppingBasketDTO basketDTO = DTOConverter.convertShoppingBasketToDTO(basket);
+            return new ResponseEntity<>(basketDTO, HttpStatus.OK);
+        } catch (EntityNotFoundException ex) {
+            return ExceptionHandlingService.handleRestException(ex, HttpStatus.NOT_FOUND);
+        } catch (Exception ex) {
+            return ExceptionHandlingService.handleRestException(ex, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 
     @PostMapping("/api/baskets/{basketId}")
-    public void addProductToBasket(@PathVariable Long basketId, @RequestBody BasketItem basketItem) {
-        shoppingBasketService.addItemToBasket(basketId, basketItem.getPizza().getId(), basketItem.getQuantity());
+    public ResponseEntity<Object> addProductToBasket(@PathVariable Long basketId, @RequestBody BasketItem basketItem) {
+        try {
+            shoppingBasketService.addItemToBasket(basketId, basketItem.getPizza().getId(), basketItem.getQuantity());
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Item added successfully");
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (EntityNotFoundException ex) {
+            return ExceptionHandlingService.handleRestException(ex, HttpStatus.NOT_FOUND);
+        } catch (BasketAlreadyCheckedOutException ex) {
+            return ExceptionHandlingService.handleRestException(ex, HttpStatus.BAD_REQUEST);
+        } catch (Exception ex) {
+            return ExceptionHandlingService.handleRestException(ex, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     @DeleteMapping("/api/baskets/{basketId}/items/{itemId}")
-    public void removeItemFromBasket(@PathVariable Long basketId, @PathVariable Long itemId) {
-        shoppingBasketService.removeItemFromBasket(basketId, itemId);
+    public ResponseEntity<Object> removeItemFromBasket(@PathVariable Long basketId, @PathVariable Long itemId) {
+        try {
+            shoppingBasketService.removeItemFromBasket(basketId, itemId);
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Item removed successfully");
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (EntityNotFoundException ex) {
+            return ExceptionHandlingService.handleRestException(ex, HttpStatus.NOT_FOUND);
+        } catch (Exception ex) {
+            return ExceptionHandlingService.handleRestException(ex, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
     }
+
+    @DeleteMapping("/api/baskets/{basketId}/items")
+    public ResponseEntity<Object> clearItemsFromBasket(@PathVariable Long basketId) {
+        try {
+            shoppingBasketService.clearBasket(basketId);
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Items cleared successfully");
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (EntityNotFoundException ex) {
+            return ExceptionHandlingService.handleRestException(ex, HttpStatus.NOT_FOUND);
+        } catch (BasketAlreadyCheckedOutException ex) {
+            return ExceptionHandlingService.handleRestException(ex, HttpStatus.BAD_REQUEST);
+        } catch (Exception ex) {
+            return ExceptionHandlingService.handleRestException(ex, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
 
     @GetMapping("/api/baskets/{basketId}/checkout")
     public ResponseEntity<Object> checkout(@PathVariable Long basketId) {
-        Order order = shoppingBasketService.checkout(basketId);
 
-        double totalAmount = order.getTotalAmount();
-
-        // You can customize the response message and structure as needed
-        Map<String, Object> response = new HashMap<>();
-        response.put("message", "Checkout successful");
-        response.put("totalAmount", totalAmount);
-
-        return ResponseEntity.ok(response);
-    }
-
-
-
-    @GetMapping("/api/baskets/{basketId}")
-    public ResponseEntity<ShoppingBasketDTO> getBasketById(@PathVariable Long basketId) {
         try {
-            ShoppingBasket basket = shoppingBasketService.getBasketById(basketId);
-            if (basket != null) {
-                // Convert ShoppingBasket to ShoppingBasketDTO
-                ShoppingBasketDTO basketDTO = DTOConverter.convertShoppingBasketToDTO(basket);
-                return ResponseEntity.ok(basketDTO);
-            } else {
-                return ResponseEntity.notFound().build();
-            }
-        } catch (Exception e) {
-            // Log the exception or handle it appropriately
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            Order order = shoppingBasketService.checkout(basketId);
+
+            double totalAmount = order.getTotalAmount();
+
+            // You can customize the response message and structure as needed
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Checkout successful");
+            response.put("orderId", order.getId());
+            response.put("totalAmount", totalAmount);
+
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (EntityNotFoundException ex) {
+            return ExceptionHandlingService.handleRestException(ex, HttpStatus.NOT_FOUND);
+        } catch (BasketAlreadyCheckedOutException ex) {
+            return ExceptionHandlingService.handleRestException(ex, HttpStatus.BAD_REQUEST);
+        } catch (Exception ex) {
+            return ExceptionHandlingService.handleRestException(ex, HttpStatus.INTERNAL_SERVER_ERROR);
         }
+
     }
+
+
+
 
     /*
     private ShoppingBasketDTO convertToDTO(ShoppingBasket basket) {

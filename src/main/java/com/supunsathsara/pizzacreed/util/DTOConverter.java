@@ -1,4 +1,4 @@
-package com.supunsathsara.pizzacreed.converter;
+package com.supunsathsara.pizzacreed.util;
 
 import com.supunsathsara.pizzacreed.dao.BasketItem;
 import com.supunsathsara.pizzacreed.dao.Pizza;

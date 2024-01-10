@@ -4,10 +4,13 @@ import com.supunsathsara.pizzacreed.dao.BasketItem;
 import com.supunsathsara.pizzacreed.dao.Order;
 import com.supunsathsara.pizzacreed.dao.Pizza;
 import com.supunsathsara.pizzacreed.dao.ShoppingBasket;
+import com.supunsathsara.pizzacreed.exception.BasketAlreadyCheckedOutException;
+import com.supunsathsara.pizzacreed.repository.BasketItemRepository;
 import com.supunsathsara.pizzacreed.repository.OrderRepository;
 import com.supunsathsara.pizzacreed.repository.PizzaRepository;
 import com.supunsathsara.pizzacreed.repository.ShoppingBasketRepository;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -23,7 +26,7 @@ public class ShoppingBasketServiceImpl implements ShoppingBasketService {
     private PizzaRepository pizzaRepository;
 
     @Autowired
-    private ShoppingBasketRepository basketItemRepository;
+    private BasketItemRepository basketItemRepository;
 
     @Autowired
     private OrderRepository orderRepository;
@@ -38,7 +41,7 @@ public class ShoppingBasketServiceImpl implements ShoppingBasketService {
 
     @Override
     public ShoppingBasket getBasketById(Long basketId) {
-       // return basketRepository.findById(basketId).orElse(null);
+        // return basketRepository.findById(basketId).orElse(null);
         Optional<ShoppingBasket> basketOptional = basketRepository.findById(basketId);
 
         if (basketOptional.isPresent()) {
@@ -50,78 +53,128 @@ public class ShoppingBasketServiceImpl implements ShoppingBasketService {
 
     @Override
     public void addItemToBasket(Long basketId, Long pizzaId, int quantity) {
-        ShoppingBasket basket = basketRepository.findById(basketId).orElseThrow(() -> new RuntimeException("Basket not found"));
+        Optional<ShoppingBasket> basketOptional = basketRepository.findById(basketId);
 
-        //check if the basket status is COMPLETE
-        if (basket.getStatus().equals("COMPLETE")) {
-            throw new RuntimeException("Basket is already checked out");
+        if (basketOptional.isPresent()) {
+            ShoppingBasket basket = basketOptional.get();
+            if (basket.getStatus().equals("COMPLETE")) {
+                throw new BasketAlreadyCheckedOutException("Basket is already checked out");
+            }
+            Optional<Pizza> pizzaOptional = pizzaRepository.findById(pizzaId);
+            if (pizzaOptional.isEmpty()) {
+                throw new EntityNotFoundException("Pizza not found with id: " + pizzaId);
+            }
+            Pizza pizza = pizzaOptional.get();
+
+            BasketItem item = new BasketItem();
+            item.setQuantity(quantity);
+            item.setPizza(pizza);
+            item.setShoppingBasket(basket);
+
+            basket.getItems().add(item);
+            //basket.setTotalAmount(basket.getTotalAmount() + (pizza.getPrice() * quantity));
+            basket.setTotalAmount(basket.getItems().stream()
+                    .mapToDouble(basketItem -> basketItem.getPizza().getPrice() * basketItem.getQuantity())
+                    .sum());
+            basket.setStatus("IN_PROGRESS");
+
+            basketRepository.save(basket);
+        } else {
+            throw new EntityNotFoundException("Shopping basket not found with id: " + basketId);
         }
-
-        Pizza pizza = pizzaRepository.findById(pizzaId).orElseThrow(() -> new RuntimeException("Pizza not found"));
-
-        BasketItem item = new BasketItem();
-        item.setQuantity(quantity);
-        item.setPizza(pizza);
-        item.setShoppingBasket(basket);
-
-        basket.getItems().add(item);
-        basket.setTotalAmount(basket.getTotalAmount() + (pizza.getPrice() * quantity));
-        basket.setStatus("IN_PROGRESS");
-
-
-        basketRepository.save(basket);
     }
 
     @Override
     public void removeItemFromBasket(Long basketId, Long itemId) {
-        ShoppingBasket basket = basketRepository.findById(basketId).orElseThrow(() -> new RuntimeException("Basket not found"));
+        Optional<ShoppingBasket> basketOptional = basketRepository.findById(basketId);
 
-        //check if the basket status is COMPLETE
-        if (basket.getStatus().equals("COMPLETE")) {
-            throw new RuntimeException("Basket is already checked out");
+        if (basketOptional.isPresent()) {
+            ShoppingBasket basket = basketOptional.get();
+            if (basket.getStatus().equals("COMPLETE")) {
+                throw new BasketAlreadyCheckedOutException("Basket is already checked out");
+            }
+
+            //basket.getItems().removeIf(item -> item.getId().equals(itemId));
+            // Retrieve the item to be removed
+            BasketItem itemToRemove = basket.getItems()
+                    .stream()
+                    .filter(item -> item.getId().equals(itemId))
+                    .findFirst()
+                    .orElseThrow(() -> new EntityNotFoundException("Basket item not found with id: " + itemId));
+
+            // Remove the item from the collection
+            basket.getItems().remove(itemToRemove);
+
+            // Remove the item from the database
+            basketItemRepository.deleteById(itemId);
+
+
+            basket.setTotalAmount(basket.getItems().stream()
+                    .mapToDouble(item -> item.getPizza().getPrice() * item.getQuantity())
+                    .sum());
+
+            if (basket.getItems().isEmpty()) {
+                basket.setStatus("EMPTY");
+            }
+
+            basketRepository.save(basket);
+        } else {
+            throw new EntityNotFoundException("Shopping basket not found with id: " + basketId);
         }
 
-        basket.getItems().removeIf(item -> item.getId().equals(itemId));
-
-        basket.setTotalAmount(basket.getItems().stream()
-                .mapToDouble(item -> item.getPizza().getPrice() * item.getQuantity())
-                .sum());
-
-        if (basket.getItems().isEmpty()) {
-            basket.setStatus("EMPTY");
-        }
-
-        basketRepository.save(basket);
     }
 
     @Override
+    @Transactional
     public void clearBasket(Long basketId) {
-        ShoppingBasket basket = basketRepository.findById(basketId).orElseThrow(() -> new RuntimeException("Basket not found"));
+        // ShoppingBasket basket = basketRepository.findById(basketId).orElseThrow(() -> new RuntimeException("Basket not found"));
 
-        basket.getItems().clear();
+        Optional<ShoppingBasket> basket = basketRepository.findById(basketId);
 
-        basket.setTotalAmount(0);
-        basket.setStatus("EMPTY");
+        if (basket.isPresent()) {
+            if (basket.get().getStatus().equals("COMPLETE")) {
+                throw new BasketAlreadyCheckedOutException("Basket is already checked out");
+            }
+            basket.get().getItems().clear();
 
-        basketRepository.save(basket);
+            // Remove all items from the database
+            basketItemRepository.deleteAllByShoppingBasketId(basketId);
+
+            basket.get().setTotalAmount(0);
+            basket.get().setStatus("EMPTY");
+            basketRepository.save(basket.get());
+        } else {
+            throw new EntityNotFoundException("Shopping basket not found with id: " + basketId);
+        }
     }
 
     @Override
     public Order checkout(Long basketId) {
-        ShoppingBasket basket = basketRepository.findById(basketId).orElseThrow(() -> new RuntimeException("Basket not found"));
+        //ShoppingBasket basket = basketRepository.findById(basketId).orElseThrow(() -> new RuntimeException("Basket not found"));
 
-        //get the total amount of the basket
-        double totalAmount = basket.getItems().stream()
-                .mapToDouble(item -> item.getPizza().getPrice() * item.getQuantity())
-                .sum();
+        Optional<ShoppingBasket> basketOptional = basketRepository.findById(basketId);
 
-        Order order = new Order();
-        order.setShoppingBasket(basket);
-        order.setTotalAmount(totalAmount);
+        if (basketOptional.isPresent()) {
+            ShoppingBasket basket = basketOptional.get();
+            if (basket.getStatus().equals("COMPLETE")) {
+                throw new BasketAlreadyCheckedOutException("Basket is already checked out");
+            }
+            //get the total amount of the basket
+            double totalAmount = basket.getItems().stream()
+                    .mapToDouble(item -> item.getPizza().getPrice() * item.getQuantity())
+                    .sum();
 
-        basket.setStatus("COMPLETE");
+            Order order = new Order();
+            order.setShoppingBasket(basket);
+            order.setTotalAmount(totalAmount);
 
-        return orderRepository.save(order);
+            basket.setStatus("COMPLETE");
+
+            return orderRepository.save(order);
+        } else {
+            throw new EntityNotFoundException("Shopping basket not found with id: " + basketId);
+        }
+
 
     }
 }

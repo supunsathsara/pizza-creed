@@ -33,4 +33,16 @@ public class PizzaServiceImpl implements PizzaService {
     public void deletePizza(Long pizzaId) {
         pizzaRepository.deleteById(pizzaId);
     }
+
+    @Override
+    public void editPizza(Long id, Pizza editedPizza) {
+        Pizza pizza = pizzaRepository.findById(id).orElse(null);
+        if (pizza == null) {
+            return;
+        }
+        pizza.setName(editedPizza.getName());
+        pizza.setPrice(editedPizza.getPrice());
+        pizza.setSize(editedPizza.getSize());
+        pizzaRepository.save(pizza);
+    }
 }

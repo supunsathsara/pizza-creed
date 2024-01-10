@@ -6,7 +6,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
 
@@ -40,9 +42,30 @@ public class PizzaController {
     }
 
     @PostMapping("/addPizza")
-    public String addPizza(Pizza newPizza) {
+    public String addPizza(Pizza newPizza, RedirectAttributes redirectAttributes) {
         pizzaService.savePizza(newPizza);
+        redirectAttributes.addFlashAttribute("successMessage", "Pizza added successfully");
         return "redirect:/menu";
     }
 
+    @GetMapping("/editPizza/{id}")
+    public String showEditPizzaForm(@PathVariable Long id, Model model) {
+        Pizza pizza = pizzaService.getPizzaById(id);
+        model.addAttribute("pizza", pizza);
+        return "editPizza";
+    }
+
+    @PostMapping("/editPizza/{id}")
+    public String editPizza(@PathVariable Long id, Pizza editedPizza , RedirectAttributes redirectAttributes) {
+        pizzaService.editPizza(id, editedPizza);
+        redirectAttributes.addFlashAttribute("successMessage", "Pizza edited successfully");
+        return "redirect:/menu";
+    }
+
+    @GetMapping("/deletePizza/{pizzaId}")
+    public String deletePizza(@PathVariable Long pizzaId, RedirectAttributes redirectAttributes) {
+        pizzaService.deletePizza(pizzaId);
+        redirectAttributes.addFlashAttribute("successMessage", "Pizza deleted successfully");
+        return "redirect:/menu";
+    }
 }

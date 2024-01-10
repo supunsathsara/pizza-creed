@@ -12,4 +12,6 @@ public interface PizzaService {
     Pizza savePizza(Pizza pizza);
 
     void deletePizza(Long pizzaId);
+
+    void editPizza(Long id, Pizza editedPizza);
 }
