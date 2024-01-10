@@ -45,4 +45,9 @@ public class PizzaServiceImpl implements PizzaService {
         pizza.setSize(editedPizza.getSize());
         pizzaRepository.save(pizza);
     }
+
+    @Override
+    public int getPizzaCount() {
+        return (int) pizzaRepository.count();
+    }
 }

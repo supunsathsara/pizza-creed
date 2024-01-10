@@ -27,6 +27,14 @@ public class PizzaController {
         return "index";
     }
 
+    @GetMapping("/dashboard")
+    public String showDashboard(Model model){
+        //add the count of pizzas to the model
+        model.addAttribute("pizzaCount", pizzaService.getPizzaCount());
+
+        return "dashboard";
+    }
+
     @GetMapping("/menu")
     public String showMenu(Model model) {
         List<Pizza> pizzas = pizzaService.getAllPizzas();

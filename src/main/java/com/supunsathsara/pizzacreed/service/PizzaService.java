@@ -14,4 +14,6 @@ public interface PizzaService {
     void deletePizza(Long pizzaId);
 
     void editPizza(Long id, Pizza editedPizza);
+
+    int getPizzaCount();
 }
