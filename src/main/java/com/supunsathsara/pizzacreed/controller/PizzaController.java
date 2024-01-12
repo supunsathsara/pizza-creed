@@ -24,7 +24,7 @@ public class PizzaController {
 
     @GetMapping("/")
     public String showHome(){
-        return "index";
+        return "redirect:/login";
     }
 
     @GetMapping("/dashboard")

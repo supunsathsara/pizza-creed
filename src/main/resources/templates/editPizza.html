@@ -8,6 +8,7 @@
 </head>
 <body class="bg-light">
 <div class="container mt-5">
+
     <h1 class="text-center text-primary">Edit Pizza</h1>
     <form th:action="@{'/editPizza/' + ${pizza.id}}" th:object="${pizza}" method="post">
         <div class="form-group">
@@ -16,7 +17,11 @@
         </div>
         <div class="form-group">
             <label for="size">Pizza Size</label>
-            <input type="text" class="form-control" id="size" th:field="*{size}" th:value="${pizza.size}" required>
+            <select class="form-control" id="size" th:field="*{size}" required>
+                <option value="SMALL" th:selected="${pizza.size == 'SMALL'}">Small</option>
+                <option value="MEDIUM" th:selected="${pizza.size == 'MEDIUM'}">Medium</option>
+                <option value="LARGE" th:selected="${pizza.size == 'LARGE'}">Large</option>
+            </select>
         </div>
         <div class="form-group">
             <label for="price">Pizza Price</label>
